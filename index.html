@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Definition Wordbox Test</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="topbar" aria-label="game status">
+      <div>
+        <p class="eyebrow">Definition Test</p>
+        <h1>Wordbox Challenge</h1>
+      </div>
+      <div class="stats">
+        <div>
+          <span id="modeLabel">Round</span>
+          <strong id="roundLabel">1 / 5</strong>
+        </div>
+        <div>
+          <span>Question</span>
+          <strong id="questionLabel">1 / 10</strong>
+        </div>
+        <div>
+          <span>Wrong</span>
+          <strong id="wrongLabel">0</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="play-area">
+      <aside class="side-panel">
+        <div class="meter">
+          <div id="progressBar"></div>
+        </div>
+        <p id="datasetInfo">Loading words...</p>
+        <button id="restartBtn" type="button">새 게임</button>
+      </aside>
+
+      <section class="quiz-panel" aria-live="polite">
+        <div class="definition-card">
+          <p id="lessonLabel">lesson</p>
+          <h2 id="definitionText">Definition</h2>
+        </div>
+
+        <div id="feedback" class="feedback" hidden></div>
+
+        <div id="wordBox" class="word-box" aria-label="word choices"></div>
+
+        <div class="actions">
+          <button id="nextBtn" type="button" disabled>다음</button>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
