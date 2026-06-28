@@ -280,9 +280,9 @@ row (v)	to cause a boat to move forward using oars
 within (prep)	inside of
 bit (n)	a small amount or a little piece of something`;
 
-const ROUND_COUNT = 5;
-const QUESTIONS_PER_ROUND = 10;
-const CHOICE_COUNT = 20;
+const ROUND_COUNT = 1;
+const QUESTIONS_PER_ROUND = 40;
+const CHOICE_COUNT = 40;
 
 const els = {
   modeLabel: document.querySelector("#modeLabel"),
@@ -332,181 +332,6 @@ function parseWords(raw) {
     });
 }
 
-function startGame() {
-  state = {
-    mode: "round",
-    roundIndex: 0,
-    questionIndex: 0,
-    currentRound: makeRound(),
-    selected: false,
-    wrongMap: new Map(),
-    reviewQueue: [],
-    reviewIndex: 0,
-  };
-  renderQuestion();
-}
-
-function makeRound() {
-  const picked = [];
-  const usedWords = new Set();
-  for (const item of shuffle(words)) {
-    if (usedWords.has(item.word)) continue;
-    picked.push(item);
-    usedWords.add(item.word);
-    if (picked.length === QUESTIONS_PER_ROUND) break;
-  }
-  return picked;
-}
-
-function renderQuestion() {
-  state.selected = false;
-  els.nextBtn.disabled = true;
-  hideFeedback();
-
-  const current = getCurrentItem();
-  if (!current) {
-    renderFinished();
-    return;
-  }
-
-  const choices = makeChoices(current.word);
-  els.lessonLabel.textContent = `${current.lesson} · ${current.part}`;
-  els.definitionText.textContent = current.definition;
-  els.wordBox.innerHTML = "";
-
-  for (const word of choices) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "choice";
-    button.textContent = word;
-    button.addEventListener("click", () => chooseAnswer(button, word, current));
-    els.wordBox.append(button);
-  }
-
-  renderStatus();
-}
-
-function getCurrentItem() {
-  if (state.mode === "review") {
-    return state.reviewQueue[state.reviewIndex] || null;
-  }
-  return state.currentRound[state.questionIndex] || null;
-}
-
-function makeChoices(answer) {
-  const distractors = shuffle(uniqueWords.filter((word) => word !== answer))
-    .slice(0, CHOICE_COUNT - 1);
-  return shuffle([answer, ...distractors]);
-}
-
-function chooseAnswer(button, selectedWord, current) {
-  if (state.selected) return;
-  state.selected = true;
-
-  const isCorrect = selectedWord === current.word;
-  for (const choice of els.wordBox.querySelectorAll(".choice")) {
-    choice.disabled = true;
-    if (choice.textContent === current.word) choice.classList.add("correct");
-  }
-
-  if (isCorrect) {
-    showFeedback(`정답! ${current.word}`, "correct");
-    if (state.mode === "review") {
-      state.wrongMap.delete(current.id);
-      state.reviewQueue.splice(state.reviewIndex, 1);
-      if (state.reviewIndex >= state.reviewQueue.length) state.reviewIndex = 0;
-    }
-  } else {
-    button.classList.add("wrong");
-    showFeedback(`오답. 정답은 ${current.word}`, "wrong");
-    state.wrongMap.set(current.id, current);
-  }
-
-  els.nextBtn.disabled = false;
-  renderStatus();
-}
-
-function nextQuestion() {
-  if (state.mode === "review") {
-    if (state.reviewQueue.length === 0) {
-      renderFinished();
-      return;
-    }
-    state.reviewIndex = (state.reviewIndex + 1) % state.reviewQueue.length;
-    renderQuestion();
-    return;
-  }
-
-  state.questionIndex += 1;
-  if (state.questionIndex < QUESTIONS_PER_ROUND) {
-    renderQuestion();
-    return;
-  }
-
-  state.roundIndex += 1;
-  if (state.roundIndex < ROUND_COUNT) {
-    state.questionIndex = 0;
-    state.currentRound = makeRound();
-    renderQuestion();
-    return;
-  }
-
-  startReview();
-}
-
-function startReview() {
-  state.mode = "review";
-  state.reviewQueue = [...state.wrongMap.values()];
-  state.reviewIndex = 0;
-
-  if (state.reviewQueue.length === 0) {
-    renderFinished();
-    return;
-  }
-
-  showFeedback("5라운드 완료. 이제 오답만 복습합니다.", "done");
-  setTimeout(renderQuestion, 700);
-}
-
-function renderFinished() {
-  els.modeLabel.textContent = "Complete";
-  els.roundLabel.textContent = "끝";
-  els.questionLabel.textContent = "-";
-  els.wrongLabel.textContent = String(state.wrongMap.size);
-  els.progressBar.style.width = "100%";
-  els.lessonLabel.textContent = "complete";
-  els.definitionText.textContent = state.wrongMap.size === 0
-    ? "모든 오답을 해결했습니다."
-    : "복습할 문제가 없습니다.";
-  els.wordBox.innerHTML = "";
-  showFeedback("새 게임을 누르면 다시 무작위로 시작합니다.", "done");
-  els.nextBtn.disabled = true;
-}
-
-function renderStatus() {
-  els.datasetInfo.textContent = `사용 중인 단어: ${words.length}개 · Wordbox: ${CHOICE_COUNT}개`;
-  els.wrongLabel.textContent = String(state.wrongMap.size);
-
-  if (state.mode === "review") {
-    els.modeLabel.textContent = "Review";
-    els.roundLabel.textContent = "오답";
-    els.questionLabel.textContent = state.reviewQueue.length
-      ? `${state.reviewIndex + 1} / ${state.reviewQueue.length}`
-      : "0 / 0";
-    els.progressBar.style.width = state.reviewQueue.length
-      ? `${Math.round(((state.reviewIndex + 1) / state.reviewQueue.length) * 100)}%`
-      : "100%";
-    return;
-  }
-
-  const completed = state.roundIndex * QUESTIONS_PER_ROUND + state.questionIndex;
-  const total = ROUND_COUNT * QUESTIONS_PER_ROUND;
-  els.modeLabel.textContent = "Round";
-  els.roundLabel.textContent = `${state.roundIndex + 1} / ${ROUND_COUNT}`;
-  els.questionLabel.textContent = `${state.questionIndex + 1} / ${QUESTIONS_PER_ROUND}`;
-  els.progressBar.style.width = `${Math.round((completed / total) * 100)}%`;
-}
-
 function showFeedback(text, type) {
   els.feedback.hidden = false;
   els.feedback.className = `feedback ${type}`;
@@ -526,6 +351,164 @@ function shuffle(array) {
     [copy[i], copy[j]] = [copy[j], copy[i]];
   }
   return copy;
+}
+
+function startGame() {
+  const roundWords = makeRound();
+  state = {
+    roundWords,
+    questions: shuffle(roundWords),
+    questionIndex: 0,
+    selected: false,
+    selectedIds: new Set(),
+    answers: [],
+  };
+  renderWordBox();
+  renderQuestion();
+}
+
+function makeRound() {
+  const picked = [];
+  const usedWords = new Set();
+
+  for (const item of shuffle(words)) {
+    if (usedWords.has(item.word)) continue;
+    picked.push(item);
+    usedWords.add(item.word);
+    if (picked.length === CHOICE_COUNT) break;
+  }
+
+  return picked;
+}
+
+function renderWordBox() {
+  els.wordBox.innerHTML = "";
+  els.wordBox.className = "word-box";
+
+  for (const item of shuffle(state.roundWords)) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "choice";
+    button.dataset.id = String(item.id);
+    button.textContent = item.word;
+    button.addEventListener("click", () => chooseAnswer(button, item));
+    els.wordBox.append(button);
+  }
+}
+
+function renderQuestion() {
+  state.selected = false;
+  els.nextBtn.disabled = true;
+  hideFeedback();
+  updateWordBox();
+
+  const current = state.questions[state.questionIndex];
+  if (!current) {
+    renderFinished();
+    return;
+  }
+
+  els.lessonLabel.textContent = `${current.lesson} · ${current.part}`;
+  els.definitionText.textContent = current.definition;
+  renderStatus();
+}
+
+function chooseAnswer(button, selectedItem) {
+  if (state.selected) return;
+  state.selected = true;
+
+  const current = state.questions[state.questionIndex];
+  const isCorrect = selectedItem.id === current.id;
+
+  for (const choice of els.wordBox.querySelectorAll(".choice")) {
+    choice.disabled = true;
+  }
+
+  button.classList.add("used");
+  state.selectedIds.add(selectedItem.id);
+  state.answers.push({ question: current, selected: selectedItem, isCorrect });
+
+  els.nextBtn.disabled = false;
+  renderStatus();
+}
+
+function nextQuestion() {
+  state.questionIndex += 1;
+
+  if (state.questionIndex < QUESTIONS_PER_ROUND) {
+    renderQuestion();
+    return;
+  }
+
+  renderFinished();
+}
+
+function renderFinished() {
+  const correctCount = state.answers.filter((answer) => answer.isCorrect).length;
+  const wrongAnswers = state.answers.filter((answer) => !answer.isCorrect);
+
+  els.modeLabel.textContent = "Complete";
+  els.roundLabel.textContent = "1 / 1";
+  els.questionLabel.textContent = `${QUESTIONS_PER_ROUND} / ${QUESTIONS_PER_ROUND}`;
+  els.wrongLabel.textContent = `${correctCount} / ${QUESTIONS_PER_ROUND}`;
+  els.progressBar.style.width = "100%";
+  els.lessonLabel.textContent = "result";
+  els.definitionText.textContent = `You got ${correctCount} out of ${QUESTIONS_PER_ROUND}.`;
+  renderWrongAnswers(wrongAnswers);
+  showFeedback(
+    wrongAnswers.length === 0
+      ? "Perfect. No wrong answers to review."
+      : `Review these ${wrongAnswers.length} missed word${wrongAnswers.length === 1 ? "" : "s"}.`,
+    "done",
+  );
+  els.nextBtn.disabled = true;
+  updateWordBox(true);
+}
+
+function renderStatus() {
+  els.datasetInfo.textContent = `Words: ${words.length} total · Current wordbox: ${CHOICE_COUNT}`;
+  els.wrongLabel.textContent = "-";
+  els.modeLabel.textContent = "Round";
+  els.roundLabel.textContent = `1 / ${ROUND_COUNT}`;
+  els.questionLabel.textContent = `${state.questionIndex + 1} / ${QUESTIONS_PER_ROUND}`;
+  els.progressBar.style.width = `${Math.round((state.questionIndex / QUESTIONS_PER_ROUND) * 100)}%`;
+}
+
+function updateWordBox(finished = false) {
+  for (const choice of els.wordBox.querySelectorAll(".choice")) {
+    const id = Number(choice.dataset.id);
+    const wasSelected = state.selectedIds.has(id);
+    choice.disabled = finished || wasSelected;
+    choice.classList.toggle("used", wasSelected);
+    choice.classList.remove("correct", "wrong");
+  }
+}
+
+function renderWrongAnswers(wrongAnswers) {
+  els.wordBox.innerHTML = "";
+  els.wordBox.className = "results-list";
+
+  if (wrongAnswers.length === 0) {
+    const item = document.createElement("div");
+    item.className = "result-item";
+    item.innerHTML = "<strong>All correct</strong><span>No missed definitions this round.</span>";
+    els.wordBox.append(item);
+    return;
+  }
+
+  for (const answer of wrongAnswers) {
+    const item = document.createElement("div");
+    item.className = "result-item";
+
+    const word = document.createElement("strong");
+    word.textContent = `${answer.question.word} (${answer.question.part})`;
+
+    const definition = document.createElement("span");
+    definition.textContent = answer.question.definition;
+
+    item.append(word, definition);
+    els.wordBox.append(item);
+  }
 }
 
 els.restartBtn.addEventListener("click", startGame);
