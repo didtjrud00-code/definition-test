@@ -236,6 +236,13 @@ h1 {
   opacity: 0.45;
 }
 
+.choice.pending {
+  border-color: var(--blue);
+  background: #eef4ff;
+  color: var(--blue);
+  box-shadow: inset 0 0 0 1px var(--blue);
+}
+
 .results-list {
   display: grid;
   gap: 10px;

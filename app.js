@@ -359,8 +359,8 @@ function startGame() {
     roundWords,
     questions: shuffle(roundWords),
     questionIndex: 0,
-    selected: false,
     selectedIds: new Set(),
+    currentSelection: null,
     answers: [],
   };
   renderWordBox();
@@ -397,7 +397,7 @@ function renderWordBox() {
 }
 
 function renderQuestion() {
-  state.selected = false;
+  state.currentSelection = null;
   els.nextBtn.disabled = true;
   hideFeedback();
   updateWordBox();
@@ -414,25 +414,21 @@ function renderQuestion() {
 }
 
 function chooseAnswer(button, selectedItem) {
-  if (state.selected) return;
-  state.selected = true;
+  if (state.selectedIds.has(selectedItem.id)) return;
 
-  const current = state.questions[state.questionIndex];
-  const isCorrect = selectedItem.id === current.id;
-
-  for (const choice of els.wordBox.querySelectorAll(".choice")) {
-    choice.disabled = true;
-  }
-
-  button.classList.add("used");
-  state.selectedIds.add(selectedItem.id);
-  state.answers.push({ question: current, selected: selectedItem, isCorrect });
-
+  state.currentSelection = selectedItem;
   els.nextBtn.disabled = false;
-  renderStatus();
+  updateWordBox();
 }
 
 function nextQuestion() {
+  if (!state.currentSelection) return;
+
+  const current = state.questions[state.questionIndex];
+  const selectedItem = state.currentSelection;
+  const isCorrect = selectedItem.id === current.id;
+  state.selectedIds.add(selectedItem.id);
+  state.answers.push({ question: current, selected: selectedItem, isCorrect });
   state.questionIndex += 1;
 
   if (state.questionIndex < QUESTIONS_PER_ROUND) {
@@ -478,8 +474,10 @@ function updateWordBox(finished = false) {
   for (const choice of els.wordBox.querySelectorAll(".choice")) {
     const id = Number(choice.dataset.id);
     const wasSelected = state.selectedIds.has(id);
+    const isPending = state.currentSelection && state.currentSelection.id === id;
     choice.disabled = finished || wasSelected;
     choice.classList.toggle("used", wasSelected);
+    choice.classList.toggle("pending", Boolean(isPending));
     choice.classList.remove("correct", "wrong");
   }
 }
